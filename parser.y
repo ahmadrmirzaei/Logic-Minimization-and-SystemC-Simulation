@@ -137,9 +137,10 @@ ports:
         drv.add_wire($1, $2);
     }
 |   ports "," "word" {
+        string type = add_wire_by_name($1.back()->name)->type;
         $1.push_back($3);
         $$ = $1;
-        drv.add_wire("input", $3);
+        drv.add_wire(type, $3);
     }
 |   ports "," ports {
     $$ = $1;
