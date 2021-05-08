@@ -11,10 +11,6 @@
     #include <iostream>
     #include <string>
     #include <vector>
-    #include "util.hh"
-    #include "wire.hh"
-    #include "assign.hh"
-    #include "module.hh"
 
     using namespace std;
     class driver;
@@ -51,102 +47,86 @@
 %token <string> WORD     "word"
 %token <int>    NUMBER   "number"
 
-%nterm <vector<string>> ports
-%nterm <pair<bool,Wire*>> variable
-%nterm <vector<pair<bool,Wire*>>> Hproduct
-%nterm <vector<pair<bool,Wire*>>> product
-%nterm <vector<vector<pair<bool,Wire*>>>> sop
-%nterm <vector<Wire*>> condition
+%nterm <string> assign
+%nterm <string> condition
+%nterm <string> sop
+%nterm <string> product
+%nterm <string> ports
 
 %%
 
 %start unit;
 unit:
 	"module" "word" "(" ports ")" ";" lines "endmodule"
-        { drv.make_module($2, $4); }
+        {
+            drv.make_systemc($2);
+        }
 ;
 
 
 lines: 
-	line line	{}	
-|	lines line	{}
+	assign assign {}	
+|	lines assign {}
 ;
 
-line:
-    assign_statement ";" {}
-;
-
-assign_statement:
-    "assign" "#" "number" "word" "=" sop {
-        if(!get_wire_by_name($4, drv.wires))
-            drv.add_wire("wire", $4);
-        drv.add_sop($3, get_wire_by_name($4, drv.wires), $6);
+assign:
+    "assign" "#" "number" "word" "=" sop ";"{
+        drv.wassign($3, $6, $4);
+        $$ = $4;
     }
-|   "assign" "#" "number" "word" "=" condition {
-        if(!get_wire_by_name($4, drv.wires))
-            drv.add_wire("wire", $4);
-        drv.add_condition($3, get_wire_by_name($4, drv.wires), $6);
+|   "assign" "#" "number" "word" "=" condition ";"{
+        drv.wassign($3, $6, $4);
+        $$ = $4;
     }
 ;
 
 condition:
     "word" "?" "word" ":" "word" {
-        $$.push_back(get_wire_by_name($1, drv.wires));
-        $$.push_back(get_wire_by_name($3, drv.wires));
-        $$.push_back(get_wire_by_name($5, drv.wires));
+        string out = drv.make_new_interconnect();
+        drv.wcond($1, $3, $5, out);
+        $$ = out;  
     }
 ;
 
 sop:
-    product "|" product { $$.push_back($1); $$.push_back($3); }
-|   sop "|" product     { $1.push_back($3); $$ = $1; }
+    product {
+        $$ = $1;
+    }
+|   sop "|" product {
+        string out = drv.make_new_interconnect();
+        drv.wor($1, $3, out);
+        $$ = out;
+    }
 ;
 
 product:
-    Hproduct "~" "word" {
-        Wire* wire = get_wire_by_name($3, drv.wires);
-        $1.push_back(make_pair(true, wire));
+    "word" {
         $$ = $1;
     }
-|   Hproduct "word"     {
-        Wire* wire = get_wire_by_name($2, drv.wires);
-        $1.push_back(make_pair(false, wire));
-        $$ = $1;
+|   "~" "word" {
+        string out = drv.make_new_interconnect();
+        drv.wnot($2, out);
+        $$ = out;
     }
-;
-
-Hproduct:
-    variable variable   { $$.push_back($1); $$.push_back($2); }
-|   Hproduct variable   { $1.push_back($2); $$ = $1; }
-;
-
-variable:
-    "word" "&"  {
-        Wire* wire = get_wire_by_name($1, drv.wires);
-        $$ = make_pair(false, wire);
+|   product "&" product "&" product "&" product {
+        string out = drv.make_new_interconnect();
+        drv.wproduct($1,$3,$5,$7,out);
+        $$ = out;
     }
-|   "~" "word" "&" {
-        Wire* wire = get_wire_by_name($2, drv.wires);
-        $$ = make_pair(true, wire);
-}
 ;
 
 ports:
     "wire_type" "word" {
-        $$.push_back($2);
-        drv.add_wire($1, $2);
+        drv.add_port($1, $2);
+        $$ = $1;
     }
 |   ports "," "word" {
-        string type = add_wire_by_name($1.back()->name)->type;
-        $1.push_back($3);
-        $$ = $1;
-        drv.add_wire(type, $3);
+        drv.add_port($1, $3);
+        $$ = $1;    
     }
 |   ports "," ports {
-    $$ = $1;
-    for(string port : $3)
-        $$.push_back(port);
-}
+        $$ = $3;
+    }
 ;
 
 %%

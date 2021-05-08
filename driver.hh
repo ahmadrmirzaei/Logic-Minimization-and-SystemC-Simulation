@@ -4,10 +4,6 @@
 #include <string>
 #include <vector>
 #include "parser.hh"
-#include "util.hh"
-#include "wire.hh"
-#include "assign.hh"
-#include "module.hh"
 
 using namespace std;
 
@@ -18,21 +14,32 @@ class driver {
 public:
     yy::location location;
 
-    vector<Wire*> wires;
-    vector<Assign*> assigns;
-    Module* top_module;
+    int interconnect;
+    vector<string> outputs;
+    string all;
+    string ports;
+    string up;
+    string down;
 
-    driver();
+    driver() : interconnect(0) {};
+
+    string make_new_interconnect();
+
+    void wbuff(string in, string out);
+    void wnot(string in, string out);
+    void wand(string a, string b, string out);
+    void wor(string a, string b, string out);
+    void wproduct(string a, string b, string c,string d, string out);
+    void wcond(string cond, string a, string b, string out);
+    void wassign(int delay, string in, string out);
+
+    void add_port(string type, string name);
+    void make_systemc(string name);
 
     void parse(string file);
     void scan_begin(string file);
     void scan_end();
 
-    void add_wire(string type, string name);
-    void add_sop(int delay, Wire* output, vector<vector<pair<bool,Wire*>>> sop);
-    void add_condition(int delay, Wire* output, vector<Wire*> condition);
-    void make_module(string name, vector<string> ports_order);
-    void log(vector<string> strs);
 };
 
 #endif

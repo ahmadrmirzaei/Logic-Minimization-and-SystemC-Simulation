@@ -1,4 +1,4 @@
-module main(input a, b, c, d, s, output o);
+module mod1(input a, b, c, d, s, output o);
 
     assign #10 w = ~a&~b&~c&~d | ~a&~b&~c&d | ~a&~b&c&~d | ~a&b&~c&d | ~a&b&c&~d |
         ~a&b&c&d | a&~b&~c&~d | a&~b&~c&d | a&~b&c&~d | a&b&c&~d ;
